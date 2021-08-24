@@ -1,0 +1,13 @@
+#!/bin/sh
+# TODO improve secrets management here
+
+curl --request POST \
+  --url '$JENKINS_URL/generic-webhook-trigger/invoke?token=$GIT_LOCAL_WEBHOOK_TOKEN' \
+  --header 'Content-Type: application/json' \
+  --data '{
+	"ref": "refs/heads/master",
+	"repository": {
+		"name": "elastic-applications"
+	}
+	
+}'

@@ -1,0 +1,87 @@
+# Sets up containerized Jenkins application using Ansible
+# Author: Reggie Valdez
+
+- hosts: localhost
+  vars:
+    required_apps: 
+      - docker
+      - python
+      - java
+    jenkins_image_result_tag: "{{ lookup('ini', 'jenkins_image_result_tag type=properties file=conf/jenkins-app.properties') }}"
+    jenkins_docker_network: "{{ lookup('ini', 'jenkins_docker_network type=properties file=conf/jenkins-app.properties') }}"
+    jenkins_published_ports: "{{ lookup('ini', 'jenkins_published_ports type=properties file=conf/jenkins-app.properties') }}"
+    local_projects_folder: "{{ lookup('ini', 'local_projects_folder type=properties file=conf/jenkins-app.properties') }}"
+    git_local_webhook_token: "{{ lookup('ini', 'git_local_webhook_token type=properties file=conf/jenkins-app.properties') }}"
+    git_name: "{{ lookup('ini', 'git_name type=properties file=conf/jenkins-app.properties') }}"
+    git_email: "{{ lookup('ini', 'git_email type=properties file=conf/jenkins-app.properties') }}"
+    
+  pre_tasks:
+    - block:
+      - name: Check if the required apps are installed
+        shell: command -v {{ item }} 
+        ignore_errors: no
+        loop: "{{ required_apps }}"
+
+  tasks:
+    - block:
+      - name: Create the docker network
+        shell: docker network create {{jenkins_docker_network}}
+        ignore_errors: yes
+     
+    - block:
+      - name: Start docker dind image
+        docker_container:
+          name: jenkins-docker
+          image: docker.io/docker:dind
+          detach: yes
+          privileged: yes
+          network_mode: bridge
+          container_default_behavior: no_defaults
+          networks:
+            - name: "{{jenkins_docker_network}}"
+              aliases:
+                - docker
+          env: 
+            docker_tls_certdir: /certs
+          volumes:
+            - jenkins-docker-certs:/certs/client
+            - jenkins-data:/var/jenkins_home
+          published_ports:
+            - "{{jenkins_published_ports}}"
+
+      - name: Build customised jenkins docker image
+        docker_image:
+          name: "{{ jenkins_image_result_tag }}"
+          source: build
+          build: 
+            path: .
+          state: present
+
+      - name: Run custom jenkins container
+        docker_container:
+          name: jenkins-container
+          image: "{{ jenkins_image_result_tag }}"
+          detach: yes
+          privileged: yes
+          network_mode: bridge
+          container_default_behavior: no_defaults
+          networks:
+            - name: "{{ jenkins_docker_network }}"
+          env: 
+            DOCKER_HOST: "tcp://docker:2376"
+            DOCKER_CERT_PATH: /certs/client
+            DOCKER_TLS_VERIFY: "1"
+            JENKINS_UC: "https://updates.jenkins.io"
+            CASC_JENKINS_CONFIG: /tmp/projects/jenkins-application/conf/
+            SECRETS_FILE: /tmp/projects/jenkins-application/conf/jenkins-app.properties
+            GIT_AUTHOR_NAME: "{{ git_name }}"
+            EMAIL: "{{ git_email }}"
+            JAVA_OPTS: -Djenkins.install.runSetupWizard=false
+          volumes:
+            - jenkins-data:/var/jenkins_home
+            - jenkins-docker-certs:/certs/client:ro
+            - "{{ local_projects_folder }}:/tmp/projects"
+          published_ports:
+            - 8080:8080
+            - 50000:50000
+      

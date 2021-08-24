@@ -1,0 +1,62 @@
+jenkins:
+  systemMessage: "Jenkins configured automatically by Jenkins Configuration as a Code"
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${jenkins_user}"
+          password: "${jenkins_password}"
+
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer:authenticated"
+
+  slaveAgentPort: 50000
+  agentProtocols:
+    - "jnlp2"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+        - string:
+            scope: GLOBAL
+            id: "git-pat"
+            secret: "${git_token}"
+            description: "Token for git"
+        - string:
+            scope: GLOBAL
+            id: "git-local-webhook-token"
+            secret: "${git_local_webhook_token}"
+            description: "Git local webhook token"
+        - usernamePassword:
+            scope: GLOBAL
+            id: "docker-creds"
+            username: "${docker_username}"
+            password: "${docker_password}"
+
+tool:
+  git:
+    installations:
+      - name: git
+        home: /usr/bin/git
+
+unclassified:
+  gitHubConfiguration:
+    apiRateLimitChecker: ThrottleForNormalize
+  gitHubPluginConfig:
+    hookUrl: "{$jenkins_url}/github-webhook/"
+  gitSCM:
+    addGitTagAction: false
+    allowSecondFetch: false
+    createAccountBasedOnEmail: false
+    disableGitToolChooser: false
+    globalConfigName: "${git_name}"
+    globalConfigEmail: "${git_email}"
+    hideCredentials: false
+    showEntireCommitSummaryInChanges: false
+    useExistingAccountWithSameEmail: false
+
+jobs:
+  - file: /tmp/projects/jenkins-application/conf/loadProjects.groovy
