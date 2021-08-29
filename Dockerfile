@@ -16,6 +16,7 @@ RUN add-apt-repository \
 RUN apt-get update && apt-get install -y docker-ce-cli
 RUN apt-get install -y python3
 RUN apt-get install -y python3-pip zip
+RUN pip3 install kubernetes
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
 RUN install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 
@@ -31,10 +32,8 @@ RUN jenkins-plugin-cli --plugins "configuration-as-code:1.51"
 RUN jenkins-plugin-cli --plugins "credentials:2.5"
 RUN jenkins-plugin-cli --plugins "matrix-auth:2.6.8"
 RUN jenkins-plugin-cli --plugins "job-dsl:1.77"
-RUN jenkins-plugin-cli --plugins "jenkins-multijob-plugin:1.36"
 RUN jenkins-plugin-cli --plugins "antisamy-markup-formatter:2.1"
 RUN jenkins-plugin-cli --plugins "delivery-pipeline-plugin"
 RUN jenkins-plugin-cli --plugins "build-pipeline-plugin"
 RUN jenkins-plugin-cli --plugins "generic-webhook-trigger:1.75"
 RUN jenkins-plugin-cli --plugins "pipeline-input-step:2.12"
-RUN pip3 install kubernetes
